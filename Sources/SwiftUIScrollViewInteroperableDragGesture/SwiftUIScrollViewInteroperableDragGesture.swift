@@ -127,6 +127,8 @@ public struct ScrollViewInteroperableDragGesture: UIGestureRecognizerRepresentab
         )
       }
       
+      let (panDirection, diff) = recognizer.panDirection
+
       if let scrollView = recognizer.trackingScrollView {
         
         let scrollController = ScrollController(scrollView: scrollView)
@@ -134,9 +136,7 @@ public struct ScrollViewInteroperableDragGesture: UIGestureRecognizerRepresentab
         context.coordinator.tracking.currentScrollController = scrollController
         
         let scrollableEdges = scrollView.scrollableEdges
-        
-        let (panDirection, diff) = recognizer.panDirection
-        
+                
         // handling scrolling in scrollview
         do {
           
@@ -242,6 +242,9 @@ public struct ScrollViewInteroperableDragGesture: UIGestureRecognizerRepresentab
         context.coordinator.tracking.isDraggingX = true
         context.coordinator.tracking.isDraggingY = true
         
+        context.coordinator.tracking.translation.width += diff.x
+        context.coordinator.tracking.translation.height += diff.y
+
         _onChange(makeValue(translation: context.coordinator.tracking.translation))
         
       }

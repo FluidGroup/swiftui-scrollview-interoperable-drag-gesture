@@ -1,5 +1,9 @@
 # ScrollView Interoperable Drag Gesture
 
+A custom gesture that allows scroll views to be prioritized. Hitting edges makes the gesture activate. 
+
+Using `UIGestureRecognizerRepresentable`
+
 ## Requirements
 - iOS18+
 

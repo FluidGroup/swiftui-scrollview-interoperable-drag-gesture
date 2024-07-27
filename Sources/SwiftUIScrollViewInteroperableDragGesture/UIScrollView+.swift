@@ -1,37 +1,54 @@
 import UIKit
 
-extension UIScrollView {
+public struct ScrollViewEdge: OptionSet, CustomStringConvertible, Sendable {
   
-  struct ScrollableEdge: OptionSet, CustomStringConvertible {
-    
-    let rawValue: Int
-    
-    static let top = ScrollableEdge(rawValue: 1 << 0)
-    static let bottom = ScrollableEdge(rawValue: 1 << 1)
-    static let left = ScrollableEdge(rawValue: 1 << 2)
-    static let right = ScrollableEdge(rawValue: 1 << 3)
-    
-    var description: String {
-      var result: [String] = []
-      if contains(.top) {
-        result.append("top")
-      }
-      if contains(.bottom) {
-        result.append("bottom")
-      }
-      if contains(.left) {
-        result.append("left")
-      }
-      if contains(.right) {
-        result.append("right")
-      }
-      return result.joined(separator: ", ")
-    }
+  public let rawValue: Int
+  
+  public init(rawValue: Int) {
+    self.rawValue = rawValue
   }
   
-  var scrollableEdges: ScrollableEdge {
+  public static let top = ScrollViewEdge(rawValue: 1 << 0)
+  public static let bottom = ScrollViewEdge(rawValue: 1 << 1)
+  public static let left = ScrollViewEdge(rawValue: 1 << 2)
+  public static let right = ScrollViewEdge(rawValue: 1 << 3)
+  
+  public static var all: ScrollViewEdge {
+    [.top, .bottom, .left, .right]
+  }
+  
+  public static var vertical: ScrollViewEdge {
+    [.top, .bottom]
+  }
+  
+  public static var horizontal: ScrollViewEdge {
+    [.left, .right]
+  }
+  
+  public var description: String {
+    var result: [String] = []
+    if contains(.top) {
+      result.append("top")
+    }
+    if contains(.bottom) {
+      result.append("bottom")
+    }
+    if contains(.left) {
+      result.append("left")
+    }
+    if contains(.right) {
+      result.append("right")
+    }
+    return result.joined(separator: ", ")
+  }
+}
+
+
+extension UIScrollView {
+
+  var scrollableEdges: ScrollViewEdge {
     
-    var edges: ScrollableEdge = []
+    var edges: ScrollViewEdge = []
     
     let contentInset: UIEdgeInsets = adjustedContentInset
     

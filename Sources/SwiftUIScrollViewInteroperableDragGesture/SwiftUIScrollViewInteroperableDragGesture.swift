@@ -14,15 +14,18 @@ public struct ScrollViewInteroperableDragGesture: UIGestureRecognizerRepresentab
   
   public struct Configuration {
     
+    public var targetEdges: ScrollViewEdge
     public var ignoresScrollView: Bool
     public var sticksToEdges: Bool
     
     public init(
       ignoresScrollView: Bool,
-      sticksToEdges: Bool
+      targetEdges: ScrollViewEdge,
+      sticksToEdges: Bool      
     ) {
       self.ignoresScrollView = ignoresScrollView
       self.sticksToEdges = sticksToEdges
+      self.targetEdges = targetEdges
     }
   }
   
@@ -33,7 +36,7 @@ public struct ScrollViewInteroperableDragGesture: UIGestureRecognizerRepresentab
       var isDraggingY: Bool = false
       var currentScrollController: ScrollController?
       var translation: CGSize = .zero
-      var stickingEdges: UIScrollView.ScrollableEdge = []
+      var stickingEdges: ScrollViewEdge = []
     }
     
     var tracking: Tracking = .init()
@@ -83,7 +86,11 @@ public struct ScrollViewInteroperableDragGesture: UIGestureRecognizerRepresentab
   private let configuration: Configuration
   
   public init(
-    configuration: Configuration = .init(ignoresScrollView: false, sticksToEdges: true),
+    configuration: Configuration = .init(
+      ignoresScrollView: false,
+      targetEdges: [.top, .bottom, .left, .right],
+      sticksToEdges: true
+    ),
     coordinateSpaceInDragging: CoordinateSpaceProtocol,
     onChange: @escaping (Value) -> Void,
     onEnd: @escaping (Value) -> Void
@@ -142,7 +149,8 @@ public struct ScrollViewInteroperableDragGesture: UIGestureRecognizerRepresentab
           
           if panDirection.contains(.up) {
             
-            if scrollableEdges.contains(.bottom) == false || configuration.sticksToEdges && context.coordinator.tracking.stickingEdges.contains(.top) {
+            if (configuration.targetEdges.contains(.bottom) && scrollableEdges.contains(.bottom) == false) || 
+                configuration.sticksToEdges && context.coordinator.tracking.stickingEdges.contains(.top) {
               
               scrollController.lockScrolling(direction: .vertical)     
               
@@ -166,7 +174,7 @@ public struct ScrollViewInteroperableDragGesture: UIGestureRecognizerRepresentab
           
           if panDirection.contains(.down) {
             
-            if scrollableEdges.contains(.top) == false || configuration.sticksToEdges && context.coordinator.tracking.stickingEdges.contains(.bottom) {
+            if (configuration.targetEdges.contains(.top) && scrollableEdges.contains(.top) == false) || configuration.sticksToEdges && context.coordinator.tracking.stickingEdges.contains(.bottom) {
               
               scrollController.lockScrolling(direction: .vertical)
               
@@ -189,7 +197,9 @@ public struct ScrollViewInteroperableDragGesture: UIGestureRecognizerRepresentab
           
           if panDirection.contains(.left) {
             
-            if scrollableEdges.contains(.right) == false || configuration.sticksToEdges && context.coordinator.tracking.stickingEdges.contains(.left) {
+            if (configuration.targetEdges.contains(.right) && scrollableEdges
+              .contains(.right) == false) ||
+                configuration.sticksToEdges && context.coordinator.tracking.stickingEdges.contains(.left) {
               
               scrollController.lockScrolling(direction: .horizontal)    
               
@@ -214,7 +224,8 @@ public struct ScrollViewInteroperableDragGesture: UIGestureRecognizerRepresentab
           
           if panDirection.contains(.right) {
             
-            if scrollableEdges.contains(.left) == false || configuration.sticksToEdges && context.coordinator.tracking.stickingEdges.contains(.right) {
+            if (configuration.targetEdges.contains(.left) && scrollableEdges.contains(.left) == false) || 
+                configuration.sticksToEdges && context.coordinator.tracking.stickingEdges.contains(.right) {
               
               scrollController.lockScrolling(direction: .horizontal)
               

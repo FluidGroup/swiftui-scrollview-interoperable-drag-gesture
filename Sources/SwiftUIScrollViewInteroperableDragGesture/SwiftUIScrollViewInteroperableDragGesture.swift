@@ -85,18 +85,22 @@ public struct ScrollViewInteroperableDragGesture: UIGestureRecognizerRepresentab
   private let _onEnd: (Value) -> Void
   private let configuration: Configuration
   
+  private let isScrollLockEnabled: Bool
+  
   public init(
     configuration: Configuration = .init(
       ignoresScrollView: false,
-      targetEdges: [.top, .bottom, .left, .right],
+      targetEdges: .all,
       sticksToEdges: true
     ),
+    isScrollLockEnabled: Bool = false,
     coordinateSpaceInDragging: CoordinateSpaceProtocol,
     onChange: @escaping (Value) -> Void,
     onEnd: @escaping (Value) -> Void
   ) {
     self.configuration = configuration
     self.coordinateSpaceInDragging = coordinateSpaceInDragging
+    self.isScrollLockEnabled = isScrollLockEnabled
     self._onChange = onChange
     self._onEnd = onEnd
   }
@@ -143,6 +147,17 @@ public struct ScrollViewInteroperableDragGesture: UIGestureRecognizerRepresentab
         context.coordinator.tracking.currentScrollController = scrollController
         
         let scrollableEdges = scrollView.scrollableEdges
+        
+        if isScrollLockEnabled {
+          scrollController.lockScrolling(direction: [.horizontal, .vertical])
+          
+          context.coordinator.tracking.translation.width += diff.x
+          context.coordinator.tracking.translation.height += diff.y
+          
+          _onChange(makeValue(translation: context.coordinator.tracking.translation))
+          
+          return
+        }
                 
         // handling scrolling in scrollview
         do {

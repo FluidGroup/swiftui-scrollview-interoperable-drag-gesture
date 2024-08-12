@@ -367,12 +367,7 @@ public final class _ScrollViewDragGestureRecognizer: UIPanGestureRecognizer {
   weak var trackingScrollView: UIScrollView?
   
   private var previousTranslation: CGPoint = .zero
-  
-  init() {
-    super.init(target: nil, action: nil)
     
-  }
-  
   var panDirection: (PanDirection, diff: CGPoint) {
     
     let translation = self.translation(in: view)

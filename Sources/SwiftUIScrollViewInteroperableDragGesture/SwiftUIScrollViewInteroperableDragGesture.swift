@@ -112,6 +112,8 @@ public struct ScrollViewInteroperableDragGesture: UIGestureRecognizerRepresentab
   
   public func makeUIGestureRecognizer(context: Context) -> _ScrollViewDragGestureRecognizer {
     let gesture = _ScrollViewDragGestureRecognizer()
+    gesture.delaysTouchesBegan = true
+    gesture.delaysTouchesEnded = true
     gesture.delegate = context.coordinator
     return gesture
   }
@@ -120,7 +122,7 @@ public struct ScrollViewInteroperableDragGesture: UIGestureRecognizerRepresentab
     _ recognizer: _ScrollViewDragGestureRecognizer,
     context: Context
   ) {
-    
+      
     switch recognizer.state {
     case .possible:
       break
@@ -144,181 +146,183 @@ public struct ScrollViewInteroperableDragGesture: UIGestureRecognizerRepresentab
       
       let (panDirection, diff) = recognizer.consumePan()
 
-      if let scrollView = recognizer.trackingScrollView {
-        
-        let scrollController = ScrollController(scrollView: scrollView)
-        
-        context.coordinator.tracking.currentScrollController = scrollController
-        
-        let scrollableEdges = scrollView.scrollableEdges
-        
-        var tracking = context.coordinator.tracking
-        
-        defer {
-          context.coordinator.tracking = tracking
+      do {
+        if let scrollView = recognizer.trackingScrollView {
+          
+          let scrollController = ScrollController(scrollView: scrollView)
+          
+          context.coordinator.tracking.currentScrollController = scrollController
+          
+          let scrollableEdges = scrollView.scrollableEdges
+          
+          var tracking = context.coordinator.tracking
+          
+          defer {
+            context.coordinator.tracking = tracking
+          }
+          
+          if isScrollLockEnabled.wrappedValue {
+            scrollController.lockScrolling(direction: [.horizontal, .vertical])
+            
+            tracking.translation.width += diff.x
+            tracking.translation.height += diff.y
+            
+            _onChange(makeValue(translation: tracking.translation))
+            
+            return
+          }
+          
+          // handling scrolling in scrollview
+          do {
+            
+            if panDirection.contains(.up) {
+              
+              if tracking.initialScrollableEdges.contains(.bottom) == false
+                  && 
+                  (
+                    (
+                      tracking.initialScrollableEdges.contains(.bottom) 
+                      &&
+                      configuration.targetEdges.contains(.bottom) && scrollableEdges.contains(.bottom) == false
+                    )
+                    ||                   
+                    configuration.sticksToEdges && tracking.stickingEdges.contains(.top)
+                  )
+              {
+                
+                scrollController.lockScrolling(direction: .vertical)     
+                
+                if configuration.sticksToEdges && tracking.stickingEdges.contains(.top) == false {
+                  scrollController.scrollTo(edge: .bottom)
+                }
+                
+                tracking.isDraggingY = true
+                
+                tracking.translation.height += diff.y
+                tracking.stickingEdges.insert(.bottom)              
+                _onChange(makeValue(translation: tracking.translation))
+              } else {
+                
+                scrollController.unlockScrolling(direction: .vertical)
+                tracking.isDraggingY = false
+                
+              }
+              
+            }
+            
+            if panDirection.contains(.down) {
+              
+              if tracking.initialScrollableEdges.contains(.top) == false
+                  && 
+                  (
+                    (
+                      configuration.targetEdges.contains(.top) 
+                      &&
+                      scrollableEdges.contains(.top) == false
+                    )
+                    ||
+                    configuration.sticksToEdges && tracking.stickingEdges.contains(.bottom)
+                  )
+              {
+                
+                scrollController.lockScrolling(direction: .vertical)
+                
+                if configuration.sticksToEdges && tracking.stickingEdges.contains(.bottom) == false {
+                  scrollController.scrollTo(edge: .top)
+                }
+                
+                tracking.translation.height += diff.y              
+                tracking.isDraggingY = true
+                tracking.stickingEdges.insert(.top)              
+                
+                _onChange(makeValue(translation: tracking.translation))
+                
+              } else {
+                scrollController.unlockScrolling(direction: .vertical)
+                tracking.isDraggingY = false
+              }
+            }
+            
+            if panDirection.contains(.left) {
+              
+              if tracking.initialScrollableEdges.contains(.right) == false
+                  &&
+                  (
+                    (
+                      configuration.targetEdges.contains(.right)                
+                      && 
+                      scrollableEdges.contains(.right) == false 
+                    )
+                    ||
+                    configuration.sticksToEdges && tracking.stickingEdges.contains(.left)
+                  )
+              {
+                
+                scrollController.lockScrolling(direction: .horizontal)    
+                
+                if configuration.sticksToEdges && tracking.stickingEdges.contains(.left) == false {
+                  scrollController.scrollTo(edge: .right)
+                }
+                
+                tracking.isDraggingX = true              
+                tracking.translation.width += diff.x
+                tracking.stickingEdges.insert(.right)
+                
+                _onChange(makeValue(translation: tracking.translation))
+                
+              } else {
+                scrollController.unlockScrolling(direction: .horizontal)
+                tracking.isDraggingX = false
+                
+              }
+              
+            }
+            
+            if panDirection.contains(.right) {
+              
+              if tracking.initialScrollableEdges.contains(.right) == false 
+                  && 
+                  (
+                    (
+                      configuration.targetEdges.contains(.left)
+                      &&
+                      scrollableEdges.contains(.left) == false
+                    )
+                    || 
+                    configuration.sticksToEdges && tracking.stickingEdges.contains(.right)
+                  ) {
+                
+                scrollController.lockScrolling(direction: .horizontal)
+                
+                if configuration.sticksToEdges && tracking.stickingEdges.contains(.right) == false {
+                  scrollController.scrollTo(edge: .left)
+                }
+                
+                tracking.isDraggingX = true              
+                tracking.translation.width += diff.x
+                tracking.stickingEdges.insert(.left)
+                
+                _onChange(makeValue(translation: tracking.translation))
+                
+              } else {
+                scrollController.unlockScrolling(direction: .horizontal)
+                tracking.isDraggingX = false
+                
+              }
+              
+            }
+          }
+          
+        } else {
+          context.coordinator.tracking.isDraggingX = true
+          context.coordinator.tracking.isDraggingY = true
+          
+          context.coordinator.tracking.translation.width += diff.x
+          context.coordinator.tracking.translation.height += diff.y
+          
+          _onChange(makeValue(translation: context.coordinator.tracking.translation))
+          
         }
-                       
-        if isScrollLockEnabled.wrappedValue {
-          scrollController.lockScrolling(direction: [.horizontal, .vertical])
-          
-          tracking.translation.width += diff.x
-          tracking.translation.height += diff.y
-          
-          _onChange(makeValue(translation: tracking.translation))
-          
-          return
-        }
-                        
-        // handling scrolling in scrollview
-        do {
-          
-          if panDirection.contains(.up) {
-            
-            if tracking.initialScrollableEdges.contains(.bottom) == false
-                && 
-                (
-                  (
-                    tracking.initialScrollableEdges.contains(.bottom) 
-                    &&
-                    configuration.targetEdges.contains(.bottom) && scrollableEdges.contains(.bottom) == false
-                  )
-                  ||                   
-                  configuration.sticksToEdges && tracking.stickingEdges.contains(.top)
-                )
-            {
-              
-              scrollController.lockScrolling(direction: .vertical)     
-              
-              if configuration.sticksToEdges && tracking.stickingEdges.contains(.top) == false {
-                scrollController.scrollTo(edge: .bottom)
-              }
-              
-              tracking.isDraggingY = true
-              
-              tracking.translation.height += diff.y
-              tracking.stickingEdges.insert(.bottom)              
-              _onChange(makeValue(translation: tracking.translation))
-            } else {
-              
-              scrollController.unlockScrolling(direction: .vertical)
-              tracking.isDraggingY = false
-              
-            }
-            
-          }
-          
-          if panDirection.contains(.down) {
-                        
-            if tracking.initialScrollableEdges.contains(.top) == false
-                && 
-                (
-                  (
-                    configuration.targetEdges.contains(.top) 
-                    &&
-                    scrollableEdges.contains(.top) == false
-                  )
-                  ||
-                  configuration.sticksToEdges && tracking.stickingEdges.contains(.bottom)
-                )
-            {
-              
-              scrollController.lockScrolling(direction: .vertical)
-              
-              if configuration.sticksToEdges && tracking.stickingEdges.contains(.bottom) == false {
-                scrollController.scrollTo(edge: .top)
-              }
-              
-              tracking.translation.height += diff.y              
-              tracking.isDraggingY = true
-              tracking.stickingEdges.insert(.top)              
-              
-              _onChange(makeValue(translation: tracking.translation))
-              
-            } else {
-              scrollController.unlockScrolling(direction: .vertical)
-              tracking.isDraggingY = false
-            }
-          }
-          
-          if panDirection.contains(.left) {
-            
-            if tracking.initialScrollableEdges.contains(.right) == false
-                &&
-                (
-                  (
-                    configuration.targetEdges.contains(.right)                
-                    && 
-                    scrollableEdges.contains(.right) == false 
-                  )
-                  ||
-                  configuration.sticksToEdges && tracking.stickingEdges.contains(.left)
-                )
-            {
-              
-              scrollController.lockScrolling(direction: .horizontal)    
-              
-              if configuration.sticksToEdges && tracking.stickingEdges.contains(.left) == false {
-                scrollController.scrollTo(edge: .right)
-              }
-              
-              tracking.isDraggingX = true              
-              tracking.translation.width += diff.x
-              tracking.stickingEdges.insert(.right)
-              
-              _onChange(makeValue(translation: tracking.translation))
-              
-            } else {
-              scrollController.unlockScrolling(direction: .horizontal)
-              tracking.isDraggingX = false
-              
-            }
-            
-          }
-          
-          if panDirection.contains(.right) {
-            
-            if tracking.initialScrollableEdges.contains(.right) == false 
-                && 
-                (
-                  (
-                    configuration.targetEdges.contains(.left)
-                    &&
-                    scrollableEdges.contains(.left) == false
-                  )
-                  || 
-                  configuration.sticksToEdges && tracking.stickingEdges.contains(.right)
-                ) {
-              
-              scrollController.lockScrolling(direction: .horizontal)
-              
-              if configuration.sticksToEdges && tracking.stickingEdges.contains(.right) == false {
-                scrollController.scrollTo(edge: .left)
-              }
-              
-              tracking.isDraggingX = true              
-              tracking.translation.width += diff.x
-              tracking.stickingEdges.insert(.left)
-              
-              _onChange(makeValue(translation: tracking.translation))
-              
-            } else {
-              scrollController.unlockScrolling(direction: .horizontal)
-              tracking.isDraggingX = false
-              
-            }
-            
-          }
-        }
-        
-      } else {
-        context.coordinator.tracking.isDraggingX = true
-        context.coordinator.tracking.isDraggingY = true
-        
-        context.coordinator.tracking.translation.width += diff.x
-        context.coordinator.tracking.translation.height += diff.y
-
-        _onChange(makeValue(translation: context.coordinator.tracking.translation))
-        
       }
       
     case .ended, .cancelled, .failed:

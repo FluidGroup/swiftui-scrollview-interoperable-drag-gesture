@@ -39,6 +39,42 @@ private var scrollView: some View {
 }
 
 @available(iOS 18, *)
+#Preview("Box") {
+  
+  @Previewable @State var offset: CGSize = .zero
+  
+  ZStack {
+    
+    Rectangle()
+      .fill(.red)
+    .frame(width: 200, height: 200)
+    .background(Color.green.secondary)
+    .padding()
+    .background(Color.green.tertiary)
+    .offset(offset)
+    .gesture(
+      ScrollViewInteroperableDragGesture(
+        configuration: .init(
+          ignoresScrollView: false,
+          targetEdges: .all,
+          sticksToEdges: false
+        ),
+        isScrollLockEnabled: .constant(false),
+        coordinateSpaceInDragging: .global,
+        onChange: { value in
+          offset = value.translation
+        },
+        onEnd: { value in
+          offset = .zero
+        }
+      )
+    )
+    .background(Color.purple.tertiary)
+    
+  }
+}
+
+@available(iOS 18, *)
 #Preview("Normal") {
 
   @Previewable @State var offset: CGSize = .zero

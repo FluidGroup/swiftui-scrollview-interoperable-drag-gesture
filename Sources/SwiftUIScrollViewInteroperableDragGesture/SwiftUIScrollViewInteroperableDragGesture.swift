@@ -132,16 +132,17 @@ public struct ScrollViewInteroperableDragGesture: UIGestureRecognizerRepresentab
     case .changed:
       
       func makeValue(translation: CGSize) -> Value {
+        
+        let sourceVelocity = context.converter.velocity(in: coordinateSpaceInDragging) ?? .zero
+                
         return Value(
           translation: translation,
           location: context.converter.location(in: coordinateSpaceInDragging),
-          velocity: { .init(width: $0.x, height: $0.y) }(
-            context.converter.velocity(in: coordinateSpaceInDragging) ?? .zero
-          )
+          velocity: .init(width: sourceVelocity.x, height: sourceVelocity.y)
         )
       }
       
-      let (panDirection, diff) = recognizer.panDirection
+      let (panDirection, diff) = recognizer.consumePan()
 
       if let scrollView = recognizer.trackingScrollView {
         
@@ -365,17 +366,14 @@ public final class _ScrollViewDragGestureRecognizer: UIPanGestureRecognizer {
   }
   
   weak var trackingScrollView: UIScrollView?
-  
-  private var previousTranslation: CGPoint = .zero
     
-  var panDirection: (PanDirection, diff: CGPoint) {
-    
+  func consumePan() -> (PanDirection, diff: CGPoint) {
     let translation = self.translation(in: view)
     
-    let diff = CGPoint(x: translation.x - previousTranslation.x, y: translation.y - previousTranslation.y)
+    self.setTranslation(.zero, in: view)
     
-    previousTranslation = translation
-    
+    let diff = translation
+        
     var direction: PanDirection = []
     
     if diff.y > 0 {
@@ -392,10 +390,9 @@ public final class _ScrollViewDragGestureRecognizer: UIPanGestureRecognizer {
     
     return (direction, diff)
   }
-  
+     
   public override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent) {
     trackingScrollView = event.findVerticalScrollView()
-    previousTranslation = .zero
     super.touchesBegan(touches, with: event)
   }
   

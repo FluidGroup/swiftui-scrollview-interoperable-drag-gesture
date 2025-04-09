@@ -24,7 +24,7 @@ final class ScrollController {
   
   init(scrollView: UIScrollView) {
     self.scrollView = scrollView
-    scrollObserver = scrollView.observe(\.contentOffset, options: .old) {
+    scrollObserver = scrollView.observe(\.contentOffset, options: [.old, .new]) {
       [weak self, weak _scrollView = scrollView] scrollView, change in
       
       guard let scrollView = _scrollView else { return }
@@ -75,14 +75,7 @@ final class ScrollController {
     }
     setContentOffset(offset)
   }
-  
-  func resetContentOffsetY() {
-    let contentInset = scrollView.adjustedContentInset
-    if scrollView.contentOffset.y < -contentInset.top {
-      setContentOffset(scrollView.contentOffsetToResetY)
-    }
-  }
-  
+     
   func setContentOffset(_ offset: CGPoint) {
     let previous = lockingDirection
     lockingDirection = []

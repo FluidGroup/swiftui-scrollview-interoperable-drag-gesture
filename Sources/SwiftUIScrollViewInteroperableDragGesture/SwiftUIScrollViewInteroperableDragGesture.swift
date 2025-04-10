@@ -112,6 +112,7 @@ public struct ScrollViewInteroperableDragGesture: UIGestureRecognizerRepresentab
   
   public func makeUIGestureRecognizer(context: Context) -> _ScrollViewDragGestureRecognizer {
     let gesture = _ScrollViewDragGestureRecognizer()
+    gesture.targetEdge = configuration.targetEdges
     gesture.delaysTouchesBegan = true
     gesture.delaysTouchesEnded = true
     gesture.delegate = context.coordinator
@@ -370,7 +371,9 @@ public final class _ScrollViewDragGestureRecognizer: UIPanGestureRecognizer {
   }
   
   weak var trackingScrollView: UIScrollView?
-    
+  
+  var targetEdge: ScrollViewEdge?
+        
   func consumePan() -> (PanDirection, diff: CGPoint) {
     let translation = self.translation(in: view)
     
@@ -396,7 +399,7 @@ public final class _ScrollViewDragGestureRecognizer: UIPanGestureRecognizer {
   }
      
   public override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent) {
-    trackingScrollView = event.findVerticalScrollView()
+    trackingScrollView = event.findScrollView(targetEdge: targetEdge!)
     super.touchesBegan(touches, with: event)
   }
   
@@ -418,7 +421,7 @@ public final class _ScrollViewDragGestureRecognizer: UIPanGestureRecognizer {
 extension UIEvent {
   
   @MainActor
-  fileprivate func findVerticalScrollView() -> UIScrollView? {
+  fileprivate func findScrollView(targetEdge: ScrollViewEdge) -> UIScrollView? {
     
     guard
       let firstTouch = allTouches?.first,
@@ -432,17 +435,33 @@ extension UIEvent {
         }
         
         @MainActor
-        func isScrollable(scrollView: UIScrollView) -> Bool {
+        func isHorizontal(scrollView: UIScrollView) -> Bool {
           
-          let contentInset: UIEdgeInsets = scrollView.adjustedContentInset
-          
-          return (scrollView.bounds.width - (contentInset.right + contentInset.left)
-           <= scrollView.contentSize.width)
-          || (scrollView.bounds.height - (contentInset.top + contentInset.bottom)
-              <= scrollView.contentSize.height)
+          let contentInset = scrollView.adjustedContentInset
+                    
+          return (scrollView.bounds.width - (contentInset.right + contentInset.left) < scrollView.contentSize.width)
         }
         
-        return isScrollable(scrollView: scrollView)
+        @MainActor
+        func isVertical(scrollView: UIScrollView) -> Bool {
+          
+          let contentInset = scrollView.adjustedContentInset
+          
+          return (scrollView.bounds.height - (contentInset.top + contentInset.bottom) < scrollView.contentSize.height)
+        }
+        
+        var isTarget: Bool = false
+        
+        if isTarget == false && targetEdge.isSubset(of: .vertical) {
+          isTarget = isVertical(scrollView: scrollView)
+        }
+        
+        if isTarget == false && targetEdge.isSubset(of: .horizontal) {
+          isTarget = isHorizontal(scrollView: scrollView)
+        }
+        
+        return isTarget
+                    
       }
     
     return (scrollView as? UIScrollView)

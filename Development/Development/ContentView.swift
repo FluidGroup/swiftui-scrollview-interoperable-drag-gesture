@@ -10,13 +10,7 @@ import SwiftUIScrollViewInteroperableDragGesture
 
 struct ContentView: View {
   var body: some View {
-    VStack {
-      Image(systemName: "globe")
-        .imageScale(.large)
-        .foregroundStyle(.tint)
-      Text("Hello, world!")
-    }
-    .padding()
+    Normal()
   }
 }
 
@@ -74,41 +68,48 @@ private var scrollView: some View {
   }
 }
 
+struct Normal: View {
+  
+  @State var offset: CGSize = .zero
+  var body: some View {
+
+    ZStack {
+
+      VStack {
+        scrollView
+      }
+      .frame(width: 200, height: 200)
+      .background(Color.green.secondary)
+      .padding()
+      .background(Color.green.tertiary)
+      .offset(offset)
+      .gesture(
+        ScrollViewInteroperableDragGesture(
+          configuration: .init(
+            ignoresScrollView: false,
+            targetEdges: .all,
+            sticksToEdges: false
+          ),
+          isScrollLockEnabled: .constant(false),
+          coordinateSpaceInDragging: .global,
+          onChange: { value in
+            offset = value.translation
+          },
+          onEnd: { value in
+            offset = .zero
+          }
+        )
+      )
+      .background(Color.purple.tertiary)
+
+    }
+  }
+}
+
 @available(iOS 18, *)
 #Preview("Normal") {
 
-  @Previewable @State var offset: CGSize = .zero
-
-  ZStack {
-
-    VStack {
-      scrollView
-    }
-    .frame(width: 200, height: 200)
-    .background(Color.green.secondary)
-    .padding()
-    .background(Color.green.tertiary)
-    .offset(offset)
-    .gesture(
-      ScrollViewInteroperableDragGesture(
-        configuration: .init(
-          ignoresScrollView: false,
-          targetEdges: .all,
-          sticksToEdges: false
-        ),
-        isScrollLockEnabled: .constant(false),
-        coordinateSpaceInDragging: .global,
-        onChange: { value in
-          offset = value.translation
-        },
-        onEnd: { value in
-          offset = .zero
-        }
-      )
-    )
-    .background(Color.purple.tertiary)
-
-  }
+  Normal()
 }
 
 @available(iOS 18, *)

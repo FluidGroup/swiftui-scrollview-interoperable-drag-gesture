@@ -11,7 +11,7 @@ final class UIKitDragDemoViewController: UIViewController {
     configuration: .init(
       ignoresScrollView: false,
       targetEdges: .all,
-      sticksToEdges: false
+      sticksToEdges: true
     )
   )
 

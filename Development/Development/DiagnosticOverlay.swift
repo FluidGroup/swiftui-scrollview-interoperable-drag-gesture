@@ -31,13 +31,37 @@ enum TargetEdgesOption: String, CaseIterable, Identifiable {
   }
 }
 
+enum EdgeActivationModeOption: String, CaseIterable, Identifiable {
+  case anytime
+  case onlyAtGestureStart
+
+  var id: String { rawValue }
+
+  var mode: EdgeActivationMode {
+    switch self {
+    case .anytime: return .anytime
+    case .onlyAtGestureStart: return .onlyAtGestureStart
+    }
+  }
+
+  var label: String {
+    switch self {
+    case .anytime: return ".anytime"
+    case .onlyAtGestureStart: return ".onlyAtGestureStart"
+    }
+  }
+}
+
 struct DemoConfig: Equatable {
   var sticksToEdges: Bool = true
   var ignoresScrollView: Bool = false
   var targetEdgesOption: TargetEdgesOption = .all
   var isScrollLockEnabled: Bool = false
+  var edgeActivationModeOption: EdgeActivationModeOption = .anytime
+  var minimumActivationDistance: CGFloat = 0
 
   var targetEdges: ScrollViewEdge { targetEdgesOption.scrollViewEdge }
+  var edgeActivationMode: EdgeActivationMode { edgeActivationModeOption.mode }
 }
 
 struct ScrollState: Equatable {
@@ -74,6 +98,31 @@ struct ConfigPanel: View {
           }
         }
         .pickerStyle(.menu)
+        .labelsHidden()
+      }
+      HStack {
+        Text("edgeActivationMode")
+        Spacer()
+        Picker("", selection: $config.edgeActivationModeOption) {
+          ForEach(EdgeActivationModeOption.allCases) { option in
+            Text(option.label).tag(option)
+          }
+        }
+        .pickerStyle(.menu)
+        .labelsHidden()
+      }
+      HStack {
+        Text("minimumActivationDistance")
+        Spacer()
+        Text("\(Int(config.minimumActivationDistance))pt")
+          .frame(width: 36, alignment: .trailing)
+          .foregroundStyle(.secondary)
+        Stepper(
+          "",
+          value: $config.minimumActivationDistance,
+          in: 0...40,
+          step: 5
+        )
         .labelsHidden()
       }
     }

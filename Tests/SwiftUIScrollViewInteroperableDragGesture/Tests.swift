@@ -326,5 +326,335 @@ struct DragGestureHandlerTests {
     #expect(value.velocity.width == 0)  // X axis not dragged, velocity zeroed
     #expect(value.velocity.height == -300)
   }
+
+  // MARK: - edgeActivationMode = .onlyAtGestureStart
+
+  private static let onlyAtStartConfig = ScrollViewInteroperableDragGestureConfiguration(
+    ignoresScrollView: false,
+    targetEdges: .all,
+    sticksToEdges: true,
+    edgeActivationMode: .onlyAtGestureStart
+  )
+
+  @Test("onlyAtGestureStart: mid-content start stays internal even after reaching bottom")
+  func onlyAtStart_midContentStart_doesNotActivate_evenAtEdge() {
+    let scrollView = makeScrollView(contentSize: .init(width: 100, height: 300))
+    scrollView.contentOffset = .init(x: 0, y: 50)  // mid-scroll, bottom still scrollable
+
+    let handler = DragGestureHandler(configuration: Self.onlyAtStartConfig)
+    let recognizer = MockRecognizer()
+    recognizer.trackingScrollView = scrollView
+
+    // Frame 1: mid-content, drag up — should not activate
+    let changes1 = runChanged(handler: handler, recognizer: recognizer, direction: .up, diff: .init(x: 0, y: -10))
+    #expect(changes1.isEmpty)
+    #expect(handler.tracking.stickingEdges.isEmpty)
+
+    // Simulate the scroll view reaching the bottom mid-gesture
+    scrollView.contentOffset = .init(x: 0, y: 200)
+
+    // Frame 2: still dragging up, scroll view is now at bottom — must NOT activate
+    let changes2 = runChanged(handler: handler, recognizer: recognizer, direction: .up, diff: .init(x: 0, y: -10))
+    #expect(changes2.isEmpty)
+    #expect(handler.tracking.stickingEdges.isEmpty)
+    #expect(handler.tracking.translation == .zero)
+    #expect(handler.tracking.isDraggingY == false)
+  }
+
+  @Test("onlyAtGestureStart: start at bottom edge still activates outer on .up")
+  func onlyAtStart_startAtBottom_dragUp_activatesOuter() {
+    let scrollView = makeScrollView(contentSize: .init(width: 100, height: 300))
+    scrollView.contentOffset = .init(x: 0, y: 200)  // at bottom
+
+    let handler = DragGestureHandler(configuration: Self.onlyAtStartConfig)
+    let recognizer = MockRecognizer()
+    recognizer.trackingScrollView = scrollView
+
+    let changes = runChanged(handler: handler, recognizer: recognizer, direction: .up, diff: .init(x: 0, y: -10))
+
+    #expect(changes.count == 1)
+    #expect(handler.tracking.stickingEdges == [.bottom])
+    #expect(handler.tracking.translation == .init(width: 0, height: -10))
+  }
+
+  @Test("onlyAtGestureStart: sticky reversal still works once activated")
+  func onlyAtStart_stickyReversal_afterActivation() {
+    let scrollView = makeScrollView(contentSize: .init(width: 100, height: 300))
+    scrollView.contentOffset = .init(x: 0, y: 200)  // at bottom
+
+    let handler = DragGestureHandler(configuration: Self.onlyAtStartConfig)
+    let recognizer = MockRecognizer()
+    recognizer.trackingScrollView = scrollView
+
+    _ = runChanged(handler: handler, recognizer: recognizer, direction: .up, diff: .init(x: 0, y: -10))
+    #expect(handler.tracking.stickingEdges == [.bottom])
+
+    let changes = runChanged(handler: handler, recognizer: recognizer, direction: .down, diff: .init(x: 0, y: 5))
+
+    #expect(handler.tracking.stickingEdges == [.bottom, .top])
+    #expect(handler.tracking.translation == .init(width: 0, height: -5))
+    #expect(changes.count == 1)
+  }
+
+  @Test("onlyAtGestureStart: initial edges are reset per gesture via purge")
+  func onlyAtStart_perGestureSnapshotReset() {
+    let scrollView = makeScrollView(contentSize: .init(width: 100, height: 300))
+    scrollView.contentOffset = .init(x: 0, y: 50)  // mid-content
+
+    let handler = DragGestureHandler(configuration: Self.onlyAtStartConfig)
+    let recognizer = MockRecognizer()
+    recognizer.trackingScrollView = scrollView
+
+    // Gesture 1: mid-content start, should not activate
+    _ = runChanged(handler: handler, recognizer: recognizer, direction: .up, diff: .init(x: 0, y: -10))
+    #expect(handler.tracking.stickingEdges.isEmpty)
+
+    // End the gesture → purge
+    recognizer.state = .ended
+    recognizer.pan = ([], .zero)
+    handler.handle(
+      recognizer: recognizer,
+      location: { .zero },
+      velocity: { nil },
+      onChange: { _ in },
+      onEnd: { _ in }
+    )
+    #expect(handler.tracking.initialScrollableEdges == nil)
+
+    // Gesture 2: now at bottom, should activate
+    scrollView.contentOffset = .init(x: 0, y: 200)
+    let changes = runChanged(handler: handler, recognizer: recognizer, direction: .up, diff: .init(x: 0, y: -10))
+    #expect(changes.count == 1)
+    #expect(handler.tracking.stickingEdges == [.bottom])
+  }
+
+  @Test("onlyAtGestureStart: horizontal — start at right edge activates .left")
+  func onlyAtStart_horizontal_startAtRight_dragLeft_activates() {
+    let scrollView = makeScrollView(contentSize: .init(width: 300, height: 100))
+    scrollView.contentOffset = .init(x: 200, y: 0)  // at right edge
+
+    let handler = DragGestureHandler(configuration: Self.onlyAtStartConfig)
+    let recognizer = MockRecognizer()
+    recognizer.trackingScrollView = scrollView
+
+    let changes = runChanged(handler: handler, recognizer: recognizer, direction: .left, diff: .init(x: -10, y: 0))
+
+    #expect(changes.count == 1)
+    #expect(handler.tracking.stickingEdges == [.right])
+  }
+
+  @Test("onlyAtGestureStart: horizontal — start at left edge activates .right")
+  func onlyAtStart_horizontal_startAtLeft_dragRight_activates() {
+    let scrollView = makeScrollView(contentSize: .init(width: 300, height: 100))
+    scrollView.contentOffset = .zero  // at left edge
+
+    let handler = DragGestureHandler(configuration: Self.onlyAtStartConfig)
+    let recognizer = MockRecognizer()
+    recognizer.trackingScrollView = scrollView
+
+    let changes = runChanged(handler: handler, recognizer: recognizer, direction: .right, diff: .init(x: 10, y: 0))
+
+    #expect(changes.count == 1)
+    #expect(handler.tracking.stickingEdges == [.left])
+  }
+
+  @Test("onlyAtGestureStart: horizontal — mid-content .right drag does not activate even at left")
+  func onlyAtStart_horizontal_midContent_dragRight_doesNotActivate() {
+    let scrollView = makeScrollView(contentSize: .init(width: 300, height: 100))
+    scrollView.contentOffset = .init(x: 50, y: 0)  // mid-content horizontally
+
+    let handler = DragGestureHandler(configuration: Self.onlyAtStartConfig)
+    let recognizer = MockRecognizer()
+    recognizer.trackingScrollView = scrollView
+
+    _ = runChanged(handler: handler, recognizer: recognizer, direction: .right, diff: .init(x: 10, y: 0))
+
+    // Simulate reaching the left edge mid-gesture
+    scrollView.contentOffset = .init(x: 0, y: 0)
+    let changes = runChanged(handler: handler, recognizer: recognizer, direction: .right, diff: .init(x: 10, y: 0))
+
+    #expect(changes.isEmpty)
+    #expect(handler.tracking.stickingEdges.isEmpty)
+  }
+
+  // MARK: - minimumActivationDistance
+
+  private static let thresholdConfig = ScrollViewInteroperableDragGestureConfiguration(
+    ignoresScrollView: false,
+    targetEdges: .all,
+    sticksToEdges: true,
+    minimumActivationDistance: 10
+  )
+
+  @Test("minimumActivationDistance: below threshold, no onChange even at edge")
+  func threshold_belowThreshold_doesNotActivate() {
+    let scrollView = makeScrollView(contentSize: .init(width: 100, height: 300))
+    scrollView.contentOffset = .init(x: 0, y: 200)  // at bottom
+
+    let handler = DragGestureHandler(configuration: Self.thresholdConfig)
+    let recognizer = MockRecognizer()
+    recognizer.trackingScrollView = scrollView
+
+    // 4 + 4 = 8pt total — below 10pt threshold
+    let changes1 = runChanged(handler: handler, recognizer: recognizer, direction: .up, diff: .init(x: 0, y: -4))
+    let changes2 = runChanged(handler: handler, recognizer: recognizer, direction: .up, diff: .init(x: 0, y: -4))
+
+    #expect(changes1.isEmpty)
+    #expect(changes2.isEmpty)
+    #expect(handler.tracking.stickingEdges.isEmpty)
+    #expect(handler.tracking.hasPassedActivationThreshold == false)
+  }
+
+  @Test("minimumActivationDistance: crossing threshold enables processing")
+  func threshold_crossingThreshold_activates() {
+    let scrollView = makeScrollView(contentSize: .init(width: 100, height: 300))
+    scrollView.contentOffset = .init(x: 0, y: 200)
+
+    let handler = DragGestureHandler(configuration: Self.thresholdConfig)
+    let recognizer = MockRecognizer()
+    recognizer.trackingScrollView = scrollView
+
+    // 4pt — under
+    _ = runChanged(handler: handler, recognizer: recognizer, direction: .up, diff: .init(x: 0, y: -4))
+    #expect(handler.tracking.hasPassedActivationThreshold == false)
+
+    // accumulated 16pt — over 10pt
+    let changes = runChanged(handler: handler, recognizer: recognizer, direction: .up, diff: .init(x: 0, y: -12))
+    #expect(handler.tracking.hasPassedActivationThreshold == true)
+    // The crossing-frame's diff is processed normally, so the outer onChange fires.
+    #expect(changes.count == 1)
+    #expect(handler.tracking.stickingEdges == [.bottom])
+  }
+
+  @Test("minimumActivationDistance: measured as magnitude from start, not path length")
+  func threshold_jiggleDoesNotAccumulate() {
+    let scrollView = makeScrollView(contentSize: .init(width: 100, height: 300))
+    scrollView.contentOffset = .init(x: 0, y: 200)
+
+    let handler = DragGestureHandler(configuration: Self.thresholdConfig)
+    let recognizer = MockRecognizer()
+    recognizer.trackingScrollView = scrollView
+
+    // Jiggle: +6 -6 +6 -6 = net 0, path length 24 — should NOT cross 10pt threshold
+    _ = runChanged(handler: handler, recognizer: recognizer, direction: .up, diff: .init(x: 0, y: -6))
+    _ = runChanged(handler: handler, recognizer: recognizer, direction: .down, diff: .init(x: 0, y: 6))
+    _ = runChanged(handler: handler, recognizer: recognizer, direction: .up, diff: .init(x: 0, y: -6))
+    let changes = runChanged(handler: handler, recognizer: recognizer, direction: .down, diff: .init(x: 0, y: 6))
+
+    #expect(handler.tracking.hasPassedActivationThreshold == false)
+    #expect(changes.isEmpty)
+  }
+
+  @Test("minimumActivationDistance: isScrollLockEnabled bypasses the gate")
+  func threshold_isScrollLockEnabledBypasses() {
+    let scrollView = makeScrollView(contentSize: .init(width: 100, height: 300))
+    scrollView.contentOffset = .init(x: 0, y: 50)
+
+    let handler = DragGestureHandler(configuration: Self.thresholdConfig)
+    handler.isScrollLockEnabled = true
+    let recognizer = MockRecognizer()
+    recognizer.trackingScrollView = scrollView
+
+    let changes = runChanged(handler: handler, recognizer: recognizer, direction: .up, diff: .init(x: 0, y: -4))
+
+    #expect(changes.count == 1)
+    #expect(handler.tracking.translation == .init(width: 0, height: -4))
+  }
+
+  // MARK: - Scroll indicator hide/restore
+
+  @Test("Scroll indicator is hidden on lock, restored on .ended")
+  func indicator_hiddenOnLock_restoredOnEnded() {
+    let scrollView = makeScrollView(contentSize: .init(width: 100, height: 300))
+    scrollView.contentOffset = .init(x: 0, y: 200)
+    scrollView.showsVerticalScrollIndicator = true
+
+    let handler = DragGestureHandler(configuration: defaultConfig)
+    let recognizer = MockRecognizer()
+    recognizer.trackingScrollView = scrollView
+
+    _ = runChanged(handler: handler, recognizer: recognizer, direction: .up, diff: .init(x: 0, y: -10))
+    #expect(scrollView.showsVerticalScrollIndicator == false)
+
+    // End gesture — indicator restored to initial value
+    recognizer.state = .ended
+    recognizer.pan = ([], .zero)
+    handler.handle(
+      recognizer: recognizer,
+      location: { .zero },
+      velocity: { nil },
+      onChange: { _ in },
+      onEnd: { _ in }
+    )
+
+    #expect(scrollView.showsVerticalScrollIndicator == true)
+  }
+
+  @Test("Scroll indicator restored to initial false value")
+  func indicator_initiallyHidden_stillRestoredAfterGesture() {
+    let scrollView = makeScrollView(contentSize: .init(width: 100, height: 300))
+    scrollView.contentOffset = .init(x: 0, y: 200)
+    scrollView.showsVerticalScrollIndicator = false  // consumer-hidden
+
+    let handler = DragGestureHandler(configuration: defaultConfig)
+    let recognizer = MockRecognizer()
+    recognizer.trackingScrollView = scrollView
+
+    _ = runChanged(handler: handler, recognizer: recognizer, direction: .up, diff: .init(x: 0, y: -10))
+    #expect(scrollView.showsVerticalScrollIndicator == false)
+
+    recognizer.state = .ended
+    recognizer.pan = ([], .zero)
+    handler.handle(
+      recognizer: recognizer,
+      location: { .zero },
+      velocity: { nil },
+      onChange: { _ in },
+      onEnd: { _ in }
+    )
+
+    // Remains false (initial was false)
+    #expect(scrollView.showsVerticalScrollIndicator == false)
+  }
+
+  @Test("Unlocking mid-gesture restores indicator immediately")
+  func indicator_restoredOnUnlock() {
+    let scrollView = makeScrollView(contentSize: .init(width: 100, height: 300))
+    scrollView.contentOffset = .init(x: 0, y: 200)  // at bottom
+    scrollView.showsVerticalScrollIndicator = true
+
+    let handler = DragGestureHandler(configuration: .init(
+      ignoresScrollView: false,
+      targetEdges: .all,
+      sticksToEdges: false
+    ))
+    let recognizer = MockRecognizer()
+    recognizer.trackingScrollView = scrollView
+
+    // Frame 1: activate (at bottom, drag up) — indicator hidden
+    _ = runChanged(handler: handler, recognizer: recognizer, direction: .up, diff: .init(x: 0, y: -10))
+    #expect(scrollView.showsVerticalScrollIndicator == false)
+
+    // Frame 2: reverse (drag down) — without sticky, unlocks, indicator restored
+    _ = runChanged(handler: handler, recognizer: recognizer, direction: .down, diff: .init(x: 0, y: 10))
+    #expect(scrollView.showsVerticalScrollIndicator == true)
+  }
+
+  @Test("Horizontal indicator is managed independently of vertical")
+  func indicator_horizontalVsVertical_independent() {
+    let scrollView = makeScrollView(contentSize: .init(width: 300, height: 300))
+    scrollView.contentOffset = .init(x: 200, y: 50)  // at right, mid-scroll vertically
+    scrollView.showsVerticalScrollIndicator = true
+    scrollView.showsHorizontalScrollIndicator = true
+
+    let handler = DragGestureHandler(configuration: defaultConfig)
+    let recognizer = MockRecognizer()
+    recognizer.trackingScrollView = scrollView
+
+    // Drag left (at right edge) — horizontal locks, vertical unaffected
+    _ = runChanged(handler: handler, recognizer: recognizer, direction: .left, diff: .init(x: -10, y: 0))
+    #expect(scrollView.showsHorizontalScrollIndicator == false)
+    #expect(scrollView.showsVerticalScrollIndicator == true)
+  }
 }
 #endif

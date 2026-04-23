@@ -4,6 +4,9 @@ public struct ScrollViewInteroperableDragGestureValue: Equatable, Sendable {
 
   public let translation: CGSize
   public let location: CGPoint
+  /// Raw velocity reported by the underlying gesture recognizer in the chosen
+  /// coordinate space. This is not filtered by which axes the outer handler
+  /// happened to own at the end of the gesture.
   public internal(set) var velocity: CGSize
 
   public init(translation: CGSize, location: CGPoint, velocity: CGSize) {
@@ -359,19 +362,11 @@ final class DragGestureHandler {
         }
       }
 
-      var value = Value(
+      let value = Value(
         translation: tracking.translation,
         location: location(),
         velocity: { .init(width: $0.x, height: $0.y) }(velocity() ?? .zero)
       )
-
-      if tracking.isDraggingX == false {
-        value.velocity.width = 0
-      }
-
-      if tracking.isDraggingY == false {
-        value.velocity.height = 0
-      }
 
       onEnd(value)
 

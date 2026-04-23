@@ -10,13 +10,7 @@ import SwiftUIScrollViewInteroperableDragGesture
 
 struct ContentView: View {
   var body: some View {
-    VStack {
-      Image(systemName: "globe")
-        .imageScale(.large)
-        .foregroundStyle(.tint)
-      Text("Hello, world!")
-    }
-    .padding()
+    Normal()
   }
 }
 
@@ -40,75 +34,82 @@ private var scrollView: some View {
 
 @available(iOS 18, *)
 #Preview("Box") {
-  
+
   @Previewable @State var offset: CGSize = .zero
-  
+
   ZStack {
-    
+
     Rectangle()
       .fill(.red)
-    .frame(width: 200, height: 200)
-    .background(Color.green.secondary)
-    .padding()
-    .background(Color.green.tertiary)
-    .offset(offset)
-    .gesture(
-      ScrollViewInteroperableDragGesture(
-        configuration: .init(
-          ignoresScrollView: false,
-          targetEdges: .all,
-          sticksToEdges: false
-        ),
-        isScrollLockEnabled: .constant(false),
-        coordinateSpaceInDragging: .global,
-        onChange: { value in
-          offset = value.translation
-        },
-        onEnd: { value in
-          offset = .zero
-        }
+      .frame(width: 200, height: 200)
+      .background(Color.green.secondary)
+      .padding()
+      .background(Color.green.tertiary)
+      .offset(offset)
+      .gesture(
+        ScrollViewInteroperableDragGesture(
+          configuration: .init(
+            ignoresScrollView: false,
+            targetEdges: .all,
+            sticksToEdges: false
+          ),
+          isScrollLockEnabled: .constant(false),
+          coordinateSpaceInDragging: .global,
+          onChange: { value in
+            offset = value.translation
+          },
+          onEnd: { value in
+            offset = .zero
+          }
+        )
       )
-    )
-    .background(Color.purple.tertiary)
-    
+      .background(Color.purple.tertiary)
+
+  }
+}
+
+struct Normal: View {
+
+  @State var offset: CGSize = .zero
+  var body: some View {
+
+    ZStack {
+
+      VStack {
+        scrollView
+      }
+      .frame(width: 200, height: 200)
+      .background(Color.green.secondary)
+      .padding()
+      .background(Color.green.tertiary)
+      .offset(offset)
+      .gesture(
+        ScrollViewInteroperableDragGesture(
+          configuration: .init(
+            ignoresScrollView: false,
+            targetEdges: .all,
+            sticksToEdges: false
+          ),
+          isScrollLockEnabled: .constant(false),
+          coordinateSpaceInDragging: .global,
+          onChange: { value in
+            offset = value.translation
+          },
+          onEnd: { value in
+            offset = .zero
+          }
+        )
+      )
+      .background(Color.purple.tertiary)
+
+    }
   }
 }
 
 @available(iOS 18, *)
 #Preview("Normal") {
 
-  @Previewable @State var offset: CGSize = .zero
-
-  ZStack {
-
-    VStack {
-      scrollView
-    }
-    .frame(width: 200, height: 200)
-    .background(Color.green.secondary)
-    .padding()
-    .background(Color.green.tertiary)
-    .offset(offset)
-    .gesture(
-      ScrollViewInteroperableDragGesture(
-        configuration: .init(
-          ignoresScrollView: false,
-          targetEdges: .all,
-          sticksToEdges: false
-        ),
-        isScrollLockEnabled: .constant(false),
-        coordinateSpaceInDragging: .global,
-        onChange: { value in
-          offset = value.translation
-        },
-        onEnd: { value in
-          offset = .zero
-        }
-      )
-    )
-    .background(Color.purple.tertiary)
-
-  }
+  Normal()
 }
 
 @available(iOS 18, *)
@@ -128,7 +129,11 @@ private var scrollView: some View {
     .offset(offset)
     .gesture(
       ScrollViewInteroperableDragGesture(
-        configuration: .init(ignoresScrollView: false, targetEdges: .all, sticksToEdges: false),
+        configuration: .init(
+          ignoresScrollView: false,
+          targetEdges: .all,
+          sticksToEdges: true
+        ),
         coordinateSpaceInDragging: .global,
         onChange: { value in
           offset = value.translation
@@ -160,7 +165,11 @@ private var scrollView: some View {
     .offset(offset)
     .gesture(
       ScrollViewInteroperableDragGesture(
-        configuration: .init(ignoresScrollView: false, targetEdges: .all, sticksToEdges: false),
+        configuration: .init(
+          ignoresScrollView: false,
+          targetEdges: .all,
+          sticksToEdges: false
+        ),
         coordinateSpaceInDragging: .global,
         onChange: { value in
           offset = value.translation

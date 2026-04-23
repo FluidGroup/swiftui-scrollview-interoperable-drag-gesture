@@ -657,6 +657,40 @@ struct DragGestureHandlerTests {
     #expect(scrollView.showsVerticalScrollIndicator == true)
   }
 
+  @Test("Vertical-only outer gesture does not recognize simultaneously with horizontal-only scroll view pans")
+  func simultaneous_verticalOuter_horizontalOnlyScrollView_disabled() {
+    let handler = DragGestureHandler(configuration: .init(
+      ignoresScrollView: false,
+      targetEdges: [.top],
+      sticksToEdges: true
+    ))
+    let outer = _ScrollViewDragGestureRecognizer()
+    let horizontalScrollView = makeScrollView(contentSize: .init(width: 300, height: 100))
+    let innerPan = UIPanGestureRecognizer()
+    horizontalScrollView.addGestureRecognizer(innerPan)
+
+    let result = handler.shouldRecognizeSimultaneously(outer, with: innerPan)
+
+    #expect(result == false)
+  }
+
+  @Test("Vertical-only outer gesture still recognizes simultaneously with vertical scroll view pans")
+  func simultaneous_verticalOuter_verticalScrollView_enabled() {
+    let handler = DragGestureHandler(configuration: .init(
+      ignoresScrollView: false,
+      targetEdges: [.top],
+      sticksToEdges: true
+    ))
+    let outer = _ScrollViewDragGestureRecognizer()
+    let verticalScrollView = makeScrollView(contentSize: .init(width: 100, height: 300))
+    let innerPan = UIPanGestureRecognizer()
+    verticalScrollView.addGestureRecognizer(innerPan)
+
+    let result = handler.shouldRecognizeSimultaneously(outer, with: innerPan)
+
+    #expect(result == true)
+  }
+
   // MARK: - External stickingEdges control
 
   @Test("overrideStickingEdges clears sticky state, reversal no longer continues")

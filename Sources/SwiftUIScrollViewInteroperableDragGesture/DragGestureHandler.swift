@@ -133,8 +133,26 @@ final class DragGestureHandler {
     // used here because `shouldRecognizeSimultaneouslyWith` may be invoked
     // before this recognizer's `touchesBegan` runs.
     if otherGestureRecognizer is UIPanGestureRecognizer,
-       otherGestureRecognizer.view is UIScrollView {
-      return configuration.ignoresScrollView == false
+       let scrollView = otherGestureRecognizer.view as? UIScrollView {
+      guard configuration.ignoresScrollView == false else {
+        return false
+      }
+
+      let wantsVertical = configuration.targetEdges.isDisjoint(with: .vertical) == false
+      let wantsHorizontal = configuration.targetEdges.isDisjoint(with: .horizontal) == false
+
+      // Match simultaneous recognition to the axes the outer gesture actually
+      // coordinates. This keeps a vertical-only sheet gesture from competing
+      // with a horizontal carousel's pan recognizer.
+      if wantsVertical, scrollView.isVerticallyScrollable {
+        return true
+      }
+
+      if wantsHorizontal, scrollView.isHorizontallyScrollable {
+        return true
+      }
+
+      return false
     }
 
     return false

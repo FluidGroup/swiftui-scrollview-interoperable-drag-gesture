@@ -46,6 +46,18 @@ public struct ScrollViewEdge: OptionSet, CustomStringConvertible, Sendable {
 
 extension UIScrollView {
 
+  var isVerticallyScrollable: Bool {
+    let contentInset = adjustedContentInset
+    let visibleHeight = bounds.height - (contentInset.top + contentInset.bottom)
+    return visibleHeight < contentSize.height
+  }
+
+  var isHorizontallyScrollable: Bool {
+    let contentInset = adjustedContentInset
+    let visibleWidth = bounds.width - (contentInset.left + contentInset.right)
+    return visibleWidth < contentSize.width
+  }
+
   var scrollableEdges: ScrollViewEdge {
     
     var edges: ScrollViewEdge = []

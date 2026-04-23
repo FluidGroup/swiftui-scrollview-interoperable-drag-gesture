@@ -58,6 +58,7 @@ struct SwiftUIDiagnosticDemo: View {
   @State private var translation: CGSize = .zero
   @State private var isOuterDragging: Bool = false
   @State private var scrollState = ScrollState()
+  @State private var stickingEdges: ScrollViewEdge = []
 
   var body: some View {
     VStack(spacing: 12) {
@@ -70,7 +71,9 @@ struct SwiftUIDiagnosticDemo: View {
       DiagnosticReadout(
         translation: translation,
         scrollState: scrollState,
-        isOuterDragging: isOuterDragging
+        isOuterDragging: isOuterDragging,
+        stickingEdges: stickingEdges,
+        onClearSticking: { stickingEdges = [] }
       )
       .padding(.horizontal, 12)
 
@@ -133,6 +136,7 @@ struct SwiftUIDiagnosticDemo: View {
           minimumActivationDistance: config.minimumActivationDistance
         ),
         isScrollLockEnabled: $config.isScrollLockEnabled,
+        stickingEdges: $stickingEdges,
         coordinateSpaceInDragging: .global,
         onChange: { value in
           translation = value.translation
@@ -184,6 +188,8 @@ struct UIKitDiagnosticDemo: View {
   @State private var translation: CGSize = .zero
   @State private var isOuterDragging: Bool = false
   @State private var scrollState = ScrollState()
+  @State private var stickingEdges: ScrollViewEdge = []
+  @State private var clearStickingRequestID: Int = 0
 
   var body: some View {
     VStack(spacing: 12) {
@@ -195,7 +201,9 @@ struct UIKitDiagnosticDemo: View {
           config: config,
           translation: $translation,
           isOuterDragging: $isOuterDragging,
-          scrollState: $scrollState
+          scrollState: $scrollState,
+          stickingEdges: $stickingEdges,
+          clearStickingRequestID: clearStickingRequestID
         )
         .clipShape(RoundedRectangle(cornerRadius: 12))
         .overlay(
@@ -216,7 +224,9 @@ struct UIKitDiagnosticDemo: View {
       DiagnosticReadout(
         translation: translation,
         scrollState: scrollState,
-        isOuterDragging: isOuterDragging
+        isOuterDragging: isOuterDragging,
+        stickingEdges: stickingEdges,
+        onClearSticking: { clearStickingRequestID &+= 1 }
       )
       .padding(.horizontal, 12)
 

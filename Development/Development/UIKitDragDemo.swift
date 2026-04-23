@@ -19,6 +19,11 @@ final class UIKitDiagnosticViewController: UIViewController {
   var onDragChange: ((CGSize, Bool) -> Void)?
   var onDragEnd: (() -> Void)?
   var onScrollStateChange: ((ScrollState) -> Void)?
+  var onStickingEdgesChange: ((ScrollViewEdge) -> Void)?
+
+  func clearStickingEdges() {
+    gesture.stickingEdges = []
+  }
 
   private var contentOffsetObservation: NSKeyValueObservation?
 
@@ -69,6 +74,9 @@ final class UIKitDiagnosticViewController: UIViewController {
     }
     gesture.onEnd = { [weak self] _ in
       self?.onDragEnd?()
+    }
+    gesture.onStickingEdgesChange = { [weak self] edges in
+      self?.onStickingEdgesChange?(edges)
     }
     view.addGestureRecognizer(gesture)
 
@@ -145,6 +153,14 @@ struct UIKitDiagnosticHostingView: UIViewControllerRepresentable {
   @Binding var translation: CGSize
   @Binding var isOuterDragging: Bool
   @Binding var scrollState: ScrollState
+  @Binding var stickingEdges: ScrollViewEdge
+  let clearStickingRequestID: Int
+
+  final class Coordinator {
+    var lastClearRequestID: Int = 0
+  }
+
+  func makeCoordinator() -> Coordinator { Coordinator() }
 
   func makeUIViewController(context: Context) -> UIKitDiagnosticViewController {
     let vc = UIKitDiagnosticViewController()
@@ -159,6 +175,9 @@ struct UIKitDiagnosticHostingView: UIViewControllerRepresentable {
     vc.onScrollStateChange = { state in
       scrollState = state
     }
+    vc.onStickingEdgesChange = { edges in
+      stickingEdges = edges
+    }
     return vc
   }
 
@@ -171,5 +190,9 @@ struct UIKitDiagnosticHostingView: UIViewControllerRepresentable {
       minimumActivationDistance: config.minimumActivationDistance,
       isScrollLockEnabled: config.isScrollLockEnabled
     )
+    if clearStickingRequestID != context.coordinator.lastClearRequestID {
+      context.coordinator.lastClearRequestID = clearStickingRequestID
+      vc.clearStickingEdges()
+    }
   }
 }

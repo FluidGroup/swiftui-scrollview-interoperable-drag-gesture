@@ -136,6 +136,8 @@ struct DiagnosticReadout: View {
   let translation: CGSize
   let scrollState: ScrollState
   let isOuterDragging: Bool
+  let stickingEdges: ScrollViewEdge
+  let onClearSticking: () -> Void
 
   var body: some View {
     VStack(alignment: .leading, spacing: 4) {
@@ -143,6 +145,17 @@ struct DiagnosticReadout: View {
       row("scrollOffset", value: "(\(format(scrollState.offset.x)), \(format(scrollState.offset.y)))")
       row("scrollable", value: edgesLabel(scrollState.scrollableEdges))
       row("outerDragging", value: isOuterDragging ? "YES" : "no")
+      HStack(alignment: .firstTextBaseline) {
+        Text("stickingEdges")
+          .foregroundStyle(.secondary)
+          .frame(width: 110, alignment: .leading)
+        Text(edgesLabel(stickingEdges))
+        Spacer()
+        Button("clear", action: onClearSticking)
+          .buttonStyle(.bordered)
+          .controlSize(.mini)
+          .disabled(stickingEdges.isEmpty)
+      }
     }
     .font(.caption.monospaced())
     .padding(12)

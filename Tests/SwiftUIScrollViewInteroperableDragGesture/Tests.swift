@@ -297,8 +297,8 @@ struct DragGestureHandlerTests {
     #expect(handler.tracking.translation == .zero)
   }
 
-  @Test("On .ended, velocity is zeroed for axes not dragged")
-  func ended_velocityZeroedForIdleAxes() {
+  @Test("On .ended, raw gesture velocity is preserved for all axes")
+  func ended_preservesRawGestureVelocity() {
     let scrollView = makeScrollView(contentSize: .init(width: 100, height: 300))
     scrollView.contentOffset = .init(x: 0, y: 200)
 
@@ -323,7 +323,7 @@ struct DragGestureHandlerTests {
     )
 
     let value = try! #require(endCalls.first)
-    #expect(value.velocity.width == 0)  // X axis not dragged, velocity zeroed
+    #expect(value.velocity.width == 500)
     #expect(value.velocity.height == -300)
   }
 

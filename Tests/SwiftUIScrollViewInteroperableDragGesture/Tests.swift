@@ -656,5 +656,83 @@ struct DragGestureHandlerTests {
     #expect(scrollView.showsHorizontalScrollIndicator == false)
     #expect(scrollView.showsVerticalScrollIndicator == true)
   }
+
+  // MARK: - External stickingEdges control
+
+  @Test("overrideStickingEdges clears sticky state, reversal no longer continues")
+  func external_clearStickingEdges_breaksReversal() {
+    let scrollView = makeScrollView(contentSize: .init(width: 100, height: 300))
+    scrollView.contentOffset = .init(x: 0, y: 200)  // at bottom
+
+    let handler = DragGestureHandler(configuration: defaultConfig)
+    let recognizer = MockRecognizer()
+    recognizer.trackingScrollView = scrollView
+
+    // Activate — .bottom sticks
+    _ = runChanged(handler: handler, recognizer: recognizer, direction: .up, diff: .init(x: 0, y: -10))
+    #expect(handler.tracking.stickingEdges == [.bottom])
+
+    // Externally clear, then move scroll view off the edge so neither primary
+    // nor sticky branch is satisfied in the next frame.
+    handler.overrideStickingEdges([])
+    scrollView.contentOffset = .init(x: 0, y: 50)
+
+    let changes = runChanged(handler: handler, recognizer: recognizer, direction: .down, diff: .init(x: 0, y: 5))
+
+    #expect(changes.isEmpty)
+    #expect(handler.tracking.stickingEdges.isEmpty)
+  }
+
+  @Test("onStickingEdgesChange fires on insert and on gesture end")
+  func external_onStickingEdgesChange_fires() {
+    let scrollView = makeScrollView(contentSize: .init(width: 100, height: 300))
+    scrollView.contentOffset = .init(x: 0, y: 200)
+
+    let handler = DragGestureHandler(configuration: defaultConfig)
+    var notifications: [ScrollViewEdge] = []
+    handler.onStickingEdgesChange = { notifications.append($0) }
+    let recognizer = MockRecognizer()
+    recognizer.trackingScrollView = scrollView
+
+    _ = runChanged(handler: handler, recognizer: recognizer, direction: .up, diff: .init(x: 0, y: -10))
+    #expect(notifications == [[.bottom]])
+
+    // End — purge notifies with empty set
+    recognizer.state = .ended
+    recognizer.pan = ([], .zero)
+    handler.handle(
+      recognizer: recognizer,
+      location: { .zero },
+      velocity: { nil },
+      onChange: { _ in },
+      onEnd: { _ in }
+    )
+
+    #expect(notifications.count == 2)
+    #expect(notifications.last == [])
+  }
+
+  @Test("overrideStickingEdges preset lets mid-content drag take over via sticky")
+  func external_presetStickingEdges_activatesViaSticky() {
+    let scrollView = makeScrollView(contentSize: .init(width: 100, height: 300))
+    scrollView.contentOffset = .init(x: 0, y: 50)  // mid-content — would not activate normally
+
+    let handler = DragGestureHandler(configuration: defaultConfig)
+    let recognizer = MockRecognizer()
+    recognizer.trackingScrollView = scrollView
+
+    // Preset: pretend a previous downward drag already stuck at top (would
+    // insert `.top`). Now on `.up`, the sticky OR checks `stickingEdges
+    // .contains(.top)` and activates even though scroll view is mid-content.
+    handler.overrideStickingEdges(.top)
+
+    let changes = runChanged(handler: handler, recognizer: recognizer, direction: .up, diff: .init(x: 0, y: -10))
+
+    #expect(changes.count == 1)
+    // The sticky branch does not insert a new edge in this path (the
+    // `.stickingEdges.insert(.bottom)` line runs, via setStickingEdges union).
+    #expect(handler.tracking.stickingEdges == [.top, .bottom])
+    #expect(handler.tracking.translation == .init(width: 0, height: -10))
+  }
 }
 #endif

@@ -30,6 +30,7 @@ public struct ScrollViewInteroperableDragGesture: UIGestureRecognizerRepresentab
   private let configuration: Configuration
 
   private let isScrollLockEnabled: Binding<Bool>
+  private let stickingEdges: Binding<ScrollViewEdge>
 
   public init(
     configuration: Configuration = .init(
@@ -38,6 +39,7 @@ public struct ScrollViewInteroperableDragGesture: UIGestureRecognizerRepresentab
       sticksToEdges: true
     ),
     isScrollLockEnabled: Binding<Bool> = .constant(false),
+    stickingEdges: Binding<ScrollViewEdge> = .constant([]),
     coordinateSpaceInDragging: CoordinateSpaceProtocol,
     onChange: @escaping (Value) -> Void,
     onEnd: @escaping (Value) -> Void
@@ -45,6 +47,7 @@ public struct ScrollViewInteroperableDragGesture: UIGestureRecognizerRepresentab
     self.configuration = configuration
     self.coordinateSpaceInDragging = coordinateSpaceInDragging
     self.isScrollLockEnabled = isScrollLockEnabled
+    self.stickingEdges = stickingEdges
     self._onChange = onChange
     self._onEnd = onEnd
   }
@@ -70,6 +73,11 @@ public struct ScrollViewInteroperableDragGesture: UIGestureRecognizerRepresentab
     handler.isScrollLockEnabled = isScrollLockEnabled.wrappedValue
     handler.configuration = configuration
 
+    let externalSticking = stickingEdges.wrappedValue
+    if externalSticking != handler.tracking.stickingEdges {
+      handler.overrideStickingEdges(externalSticking)
+    }
+
     handler.handle(
       recognizer: recognizer,
       location: { context.converter.location(in: coordinateSpaceInDragging) },
@@ -77,6 +85,10 @@ public struct ScrollViewInteroperableDragGesture: UIGestureRecognizerRepresentab
       onChange: _onChange,
       onEnd: _onEnd
     )
+
+    if handler.tracking.stickingEdges != stickingEdges.wrappedValue {
+      stickingEdges.wrappedValue = handler.tracking.stickingEdges
+    }
   }
 }
 

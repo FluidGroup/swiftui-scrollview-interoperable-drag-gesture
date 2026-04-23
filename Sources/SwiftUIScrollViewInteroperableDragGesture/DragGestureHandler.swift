@@ -87,12 +87,28 @@ final class DragGestureHandler {
   var configuration: Configuration
   var isScrollLockEnabled: Bool = false
 
+  var onStickingEdgesChange: ((ScrollViewEdge) -> Void)?
+
   init(configuration: Configuration) {
     self.configuration = configuration
   }
 
   func purgeTrackingState() {
+    let hadStickingEdges = tracking.stickingEdges
     tracking = .init()
+    if hadStickingEdges.isEmpty == false {
+      onStickingEdgesChange?([])
+    }
+  }
+
+  private func setStickingEdges(_ edges: ScrollViewEdge) {
+    guard tracking.stickingEdges != edges else { return }
+    tracking.stickingEdges = edges
+    onStickingEdgesChange?(edges)
+  }
+
+  func overrideStickingEdges(_ edges: ScrollViewEdge) {
+    setStickingEdges(edges)
   }
 
   func shouldRecognizeSimultaneously(
@@ -225,7 +241,7 @@ final class DragGestureHandler {
             tracking.isDraggingY = true
 
             tracking.translation.height += diff.y
-            tracking.stickingEdges.insert(.bottom)
+            setStickingEdges(tracking.stickingEdges.union(.bottom))
             onChange(makeValue(translation: tracking.translation))
           } else {
 
@@ -252,7 +268,7 @@ final class DragGestureHandler {
 
             tracking.translation.height += diff.y
             tracking.isDraggingY = true
-            tracking.stickingEdges.insert(.top)
+            setStickingEdges(tracking.stickingEdges.union(.top))
 
             onChange(makeValue(translation: tracking.translation))
 
@@ -278,7 +294,7 @@ final class DragGestureHandler {
 
             tracking.isDraggingX = true
             tracking.translation.width += diff.x
-            tracking.stickingEdges.insert(.right)
+            setStickingEdges(tracking.stickingEdges.union(.right))
 
             onChange(makeValue(translation: tracking.translation))
 
@@ -306,7 +322,7 @@ final class DragGestureHandler {
 
             tracking.isDraggingX = true
             tracking.translation.width += diff.x
-            tracking.stickingEdges.insert(.left)
+            setStickingEdges(tracking.stickingEdges.union(.left))
 
             onChange(makeValue(translation: tracking.translation))
 

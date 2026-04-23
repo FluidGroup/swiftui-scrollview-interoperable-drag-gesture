@@ -18,6 +18,18 @@ public final class UIScrollViewInteroperableDragGestureRecognizer: _ScrollViewDr
     set { handler.isScrollLockEnabled = newValue }
   }
 
+  /// Which edges the gesture is currently "sticking" to. Reactive to scroll view
+  /// state during a drag; setting this forces the handler into (or out of) a
+  /// sticky state. Writes only take effect while `configuration.sticksToEdges`
+  /// is `true` — otherwise the handler ignores `stickingEdges` in its pan
+  /// branches.
+  public var stickingEdges: ScrollViewEdge {
+    get { handler.tracking.stickingEdges }
+    set { handler.overrideStickingEdges(newValue) }
+  }
+
+  public var onStickingEdgesChange: ((ScrollViewEdge) -> Void)?
+
   public weak var coordinateSpaceView: UIView?
 
   public var onChange: ((Value) -> Void)?
@@ -42,6 +54,9 @@ public final class UIScrollViewInteroperableDragGestureRecognizer: _ScrollViewDr
     self.delaysTouchesEnded = true
     self.delegate = internalDelegate
     self.addTarget(self, action: #selector(handleGesture))
+    self.handler.onStickingEdgesChange = { [weak self] edges in
+      self?.onStickingEdgesChange?(edges)
+    }
   }
 
   @objc

@@ -80,7 +80,7 @@ public struct ScrollViewInteroperableDragGesture: UIGestureRecognizerRepresentab
   }
 }
 
-public class _ScrollViewDragGestureRecognizer: UIPanGestureRecognizer {
+public class _ScrollViewDragGestureRecognizer: UIPanGestureRecognizer, ScrollViewDragGestureRecognizing {
 
   struct PanDirection: OptionSet {
     let rawValue: Int

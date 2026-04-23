@@ -27,7 +27,9 @@ let package = Package(
     ),
     .testTarget(
       name: "SwiftUIScrollViewInteroperableDragGestureTests",
-      dependencies: ["SwiftUIScrollViewInteroperableDragGesture"]
+      dependencies: ["SwiftUIScrollViewInteroperableDragGesture"],
+      path: "Tests/SwiftUIScrollViewInteroperableDragGesture"
     ),
-  ]
+  ],
+  swiftLanguageModes: [.v6]
 )

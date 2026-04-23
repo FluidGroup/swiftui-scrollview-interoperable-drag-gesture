@@ -1,6 +1,6 @@
 import UIKit
 
-public struct ScrollViewInteroperableDragGestureValue: Equatable {
+public struct ScrollViewInteroperableDragGestureValue: Equatable, Sendable {
 
   public let translation: CGSize
   public let location: CGPoint
@@ -13,7 +13,7 @@ public struct ScrollViewInteroperableDragGestureValue: Equatable {
   }
 }
 
-public struct ScrollViewInteroperableDragGestureConfiguration {
+public struct ScrollViewInteroperableDragGestureConfiguration: Sendable {
 
   public var targetEdges: ScrollViewEdge
   public var ignoresScrollView: Bool
@@ -28,6 +28,14 @@ public struct ScrollViewInteroperableDragGestureConfiguration {
     self.sticksToEdges = sticksToEdges
     self.targetEdges = targetEdges
   }
+}
+
+// Abstraction over `_ScrollViewDragGestureRecognizer` so that the handler can
+// be driven by a test double. Production code uses the real recognizer.
+protocol ScrollViewDragGestureRecognizing: AnyObject {
+  @MainActor var state: UIGestureRecognizer.State { get }
+  @MainActor var trackingScrollView: UIScrollView? { get }
+  @MainActor func consumePan() -> (_ScrollViewDragGestureRecognizer.PanDirection, diff: CGPoint)
 }
 
 @MainActor
@@ -83,7 +91,7 @@ final class DragGestureHandler {
   }
 
   func handle(
-    recognizer: _ScrollViewDragGestureRecognizer,
+    recognizer: some ScrollViewDragGestureRecognizing,
     location: () -> CGPoint,
     velocity: () -> CGPoint?,
     onChange: (Value) -> Void,

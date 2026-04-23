@@ -61,7 +61,7 @@ final class DragGestureHandler {
     with otherGestureRecognizer: UIGestureRecognizer
   ) -> Bool {
 
-    guard let _gestureRecognizer = gestureRecognizer as? _ScrollViewDragGestureRecognizer else {
+    guard gestureRecognizer is _ScrollViewDragGestureRecognizer else {
       assertionFailure("\(gestureRecognizer)")
       return false
     }
@@ -70,13 +70,16 @@ final class DragGestureHandler {
       return false
     }
 
-    if configuration.ignoresScrollView {
-      if otherGestureRecognizer.view is UIScrollView {
-        return false
-      }
+    // Allow simultaneous recognition with a UIScrollView's pan gesture so that
+    // scrolling works alongside this gesture. `trackingScrollView` cannot be
+    // used here because `shouldRecognizeSimultaneouslyWith` may be invoked
+    // before this recognizer's `touchesBegan` runs.
+    if otherGestureRecognizer is UIPanGestureRecognizer,
+       otherGestureRecognizer.view is UIScrollView {
+      return configuration.ignoresScrollView == false
     }
 
-    return _gestureRecognizer.trackingScrollView == otherGestureRecognizer.view
+    return false
   }
 
   func handle(

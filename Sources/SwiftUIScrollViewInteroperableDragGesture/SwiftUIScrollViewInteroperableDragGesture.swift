@@ -148,45 +148,38 @@ extension UIEvent {
     guard
       let firstTouch = allTouches?.first,
       let targetView = firstTouch.view
-    else { return nil }
+    else {
+      return nil
+    }
 
-    let scrollView = Array(sequence(first: targetView, next: { $0.next }))
-      .last {
-        guard let scrollView = $0 as? UIScrollView else {
-          return false
+    let wantsVertical = targetEdge.isDisjoint(with: .vertical) == false
+    let wantsHorizontal = targetEdge.isDisjoint(with: .horizontal) == false
+
+    // Walk the responder chain from the touched view outward, returning the
+    // innermost scroll view that can scroll in a direction we care about.
+    for responder in sequence(first: targetView as UIResponder, next: { $0.next }) {
+      guard let scrollView = responder as? UIScrollView else { continue }
+
+      let contentInset = scrollView.adjustedContentInset
+
+      if wantsVertical {
+        let contentHeight = scrollView.contentSize.height
+        let visibleHeight = scrollView.bounds.height - (contentInset.top + contentInset.bottom)
+        if visibleHeight < contentHeight {
+          return scrollView
         }
-
-        @MainActor
-        func isHorizontal(scrollView: UIScrollView) -> Bool {
-
-          let contentInset = scrollView.adjustedContentInset
-
-          return (scrollView.bounds.width - (contentInset.right + contentInset.left) < scrollView.contentSize.width)
-        }
-
-        @MainActor
-        func isVertical(scrollView: UIScrollView) -> Bool {
-
-          let contentInset = scrollView.adjustedContentInset
-
-          return (scrollView.bounds.height - (contentInset.top + contentInset.bottom) < scrollView.contentSize.height)
-        }
-
-        var isTarget: Bool = false
-
-        if isTarget == false && targetEdge.isSubset(of: .vertical) {
-          isTarget = isVertical(scrollView: scrollView)
-        }
-
-        if isTarget == false && targetEdge.isSubset(of: .horizontal) {
-          isTarget = isHorizontal(scrollView: scrollView)
-        }
-
-        return isTarget
-
       }
 
-    return (scrollView as? UIScrollView)
+      if wantsHorizontal {
+        let contentWidth = scrollView.contentSize.width
+        let visibleWidth = scrollView.bounds.width - (contentInset.left + contentInset.right)
+        if visibleWidth < contentWidth {
+          return scrollView
+        }
+      }
+    }
+
+    return nil
   }
 
 }

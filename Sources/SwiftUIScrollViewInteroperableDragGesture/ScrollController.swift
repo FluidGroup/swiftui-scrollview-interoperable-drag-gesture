@@ -90,8 +90,22 @@ final class ScrollController {
   }
 
   func endTracking() {
+    let wasLocked = lockingDirection.isEmpty == false
     unlockScrolling(direction: [.vertical, .horizontal])
     scrollObserver.invalidate()
+
+    if wasLocked {
+      // After the inner scroll view's pan ends, UIKit may schedule a
+      // deceleration animation on the next runloop tick. If we were locked at
+      // release time, the outer gesture "owned" the motion and any residual
+      // scroll decel would visibly fight its follow-through animation. Defer
+      // the cancel to after the current tick so UIKit has already scheduled
+      // the decel we need to override.
+      let scrollView = self.scrollView
+      DispatchQueue.main.async {
+        scrollView.setContentOffset(scrollView.contentOffset, animated: false)
+      }
+    }
   }
 
   func scrollTo(edge: Edge) {
@@ -116,7 +130,10 @@ final class ScrollController {
     defer {
       lockingDirection = previous
     }
-    scrollView.contentOffset = offset
+    // `setContentOffset(_:animated:false)` cancels any in-flight deceleration
+    // animation; direct assignment does not. This matters when locking arrives
+    // while UIScrollView is decelerating from a prior fling.
+    scrollView.setContentOffset(offset, animated: false)
     if previous.isEmpty == false {
       lockedContentOffset = offset
     }

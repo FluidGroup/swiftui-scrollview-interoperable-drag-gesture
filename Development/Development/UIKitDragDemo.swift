@@ -2,12 +2,13 @@ import SwiftUI
 import UIKit
 import SwiftUIScrollViewInteroperableDragGesture
 
-final class UIKitDragDemoViewController: UIViewController {
+// MARK: - View controller
 
-  private let box = UIView()
-  private let scrollView = UIScrollView()
+final class UIKitDiagnosticViewController: UIViewController {
+
+  let scrollView = UIScrollView()
   private let content = UIStackView()
-  private let gesture = UIScrollViewInteroperableDragGestureRecognizer(
+  let gesture = UIScrollViewInteroperableDragGestureRecognizer(
     configuration: .init(
       ignoresScrollView: false,
       targetEdges: .all,
@@ -15,35 +16,30 @@ final class UIKitDragDemoViewController: UIViewController {
     )
   )
 
+  var onDragChange: ((CGSize, Bool) -> Void)?
+  var onDragEnd: (() -> Void)?
+  var onScrollStateChange: ((ScrollState) -> Void)?
+
+  private var contentOffsetObservation: NSKeyValueObservation?
+
   override func viewDidLoad() {
     super.viewDidLoad()
 
-    view.backgroundColor = UIColor.systemGroupedBackground
+    view.backgroundColor = UIColor.tertiarySystemBackground
 
-    box.backgroundColor = UIColor.systemGreen.withAlphaComponent(0.3)
-    box.translatesAutoresizingMaskIntoConstraints = false
-    view.addSubview(box)
-
-    NSLayoutConstraint.activate([
-      box.widthAnchor.constraint(equalToConstant: 240),
-      box.heightAnchor.constraint(equalToConstant: 240),
-      box.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-      box.centerYAnchor.constraint(equalTo: view.centerYAnchor),
-    ])
-
-    scrollView.backgroundColor = .systemBlue.withAlphaComponent(0.15)
     scrollView.translatesAutoresizingMaskIntoConstraints = false
-    box.addSubview(scrollView)
+    scrollView.contentInsetAdjustmentBehavior = .never
+    view.addSubview(scrollView)
 
     NSLayoutConstraint.activate([
-      scrollView.leadingAnchor.constraint(equalTo: box.leadingAnchor, constant: 12),
-      scrollView.trailingAnchor.constraint(equalTo: box.trailingAnchor, constant: -12),
-      scrollView.topAnchor.constraint(equalTo: box.topAnchor, constant: 12),
-      scrollView.bottomAnchor.constraint(equalTo: box.bottomAnchor, constant: -12),
+      scrollView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+      scrollView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+      scrollView.topAnchor.constraint(equalTo: view.topAnchor),
+      scrollView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
     ])
 
     content.axis = .vertical
-    content.spacing = 20
+    content.spacing = 4
     content.alignment = .leading
     content.translatesAutoresizingMaskIntoConstraints = false
     scrollView.addSubview(content)
@@ -55,46 +51,119 @@ final class UIKitDragDemoViewController: UIViewController {
       content.bottomAnchor.constraint(equalTo: scrollView.contentLayoutGuide.bottomAnchor, constant: -16),
     ])
 
-    for _ in 0..<6 {
-      let row = UIStackView()
-      row.axis = .horizontal
-      row.spacing = 20
-      for _ in 0..<6 {
-        let cell = UIView()
-        cell.backgroundColor = .systemTeal
-        cell.translatesAutoresizingMaskIntoConstraints = false
-        cell.widthAnchor.constraint(equalToConstant: 30).isActive = true
-        cell.heightAnchor.constraint(equalToConstant: 30).isActive = true
-        row.addArrangedSubview(cell)
+    let rows = 14
+    let cols = 10
+    for row in 0..<rows {
+      let rowStack = UIStackView()
+      rowStack.axis = .horizontal
+      rowStack.spacing = 4
+      for col in 0..<cols {
+        let n = row * cols + col
+        rowStack.addArrangedSubview(makeCell(n: n))
       }
-      content.addArrangedSubview(row)
+      content.addArrangedSubview(rowStack)
     }
 
     gesture.onChange = { [weak self] value in
-      guard let self else { return }
-      self.box.transform = CGAffineTransform(
-        translationX: value.translation.width,
-        y: value.translation.height
-      )
+      self?.onDragChange?(value.translation, value.translation != .zero)
     }
     gesture.onEnd = { [weak self] _ in
-      guard let self else { return }
-      UIView.animate(withDuration: 0.25) {
-        self.box.transform = .identity
+      self?.onDragEnd?()
+    }
+    view.addGestureRecognizer(gesture)
+
+    contentOffsetObservation = scrollView.observe(\.contentOffset, options: [.new, .initial]) { [weak self] _, _ in
+      MainActor.assumeIsolated {
+        self?.reportScrollState()
       }
     }
-    box.addGestureRecognizer(gesture)
+  }
+
+  override func viewDidLayoutSubviews() {
+    super.viewDidLayoutSubviews()
+    reportScrollState()
+  }
+
+  func setConfig(
+    ignoresScrollView: Bool,
+    targetEdges: ScrollViewEdge,
+    sticksToEdges: Bool,
+    isScrollLockEnabled: Bool
+  ) {
+    gesture.configuration = .init(
+      ignoresScrollView: ignoresScrollView,
+      targetEdges: targetEdges,
+      sticksToEdges: sticksToEdges
+    )
+    gesture.isScrollLockEnabled = isScrollLockEnabled
+  }
+
+  private func reportScrollState() {
+    let state = ScrollState(
+      offset: scrollView.contentOffset,
+      contentSize: scrollView.contentSize,
+      containerSize: scrollView.bounds.size,
+      contentInset: scrollView.adjustedContentInset
+    )
+    onScrollStateChange?(state)
+  }
+
+  private func makeCell(n: Int) -> UIView {
+    let label = UILabel()
+    label.text = "\(n)"
+    label.font = .monospacedSystemFont(ofSize: 11, weight: .regular)
+    label.textAlignment = .center
+    label.translatesAutoresizingMaskIntoConstraints = false
+    label.backgroundColor = Self.bandColor(for: n)
+    label.layer.cornerRadius = 4
+    label.layer.masksToBounds = true
+    NSLayoutConstraint.activate([
+      label.widthAnchor.constraint(equalToConstant: 30),
+      label.heightAnchor.constraint(equalToConstant: 30),
+    ])
+    return label
+  }
+
+  private static func bandColor(for n: Int) -> UIColor {
+    switch (n / 10) % 4 {
+    case 0: return UIColor.systemTeal.withAlphaComponent(0.25)
+    case 1: return UIColor.systemIndigo.withAlphaComponent(0.25)
+    case 2: return UIColor.systemPink.withAlphaComponent(0.25)
+    default: return UIColor.systemGreen.withAlphaComponent(0.25)
+    }
   }
 }
 
-struct UIKitDragDemoView: UIViewControllerRepresentable {
-  func makeUIViewController(context: Context) -> UIKitDragDemoViewController {
-    UIKitDragDemoViewController()
-  }
-  func updateUIViewController(_ uiViewController: UIKitDragDemoViewController, context: Context) {}
-}
+// MARK: - SwiftUI bridge
 
-#Preview("UIKit") {
-  UIKitDragDemoView()
-    .ignoresSafeArea()
+struct UIKitDiagnosticHostingView: UIViewControllerRepresentable {
+  let config: DemoConfig
+  @Binding var translation: CGSize
+  @Binding var isOuterDragging: Bool
+  @Binding var scrollState: ScrollState
+
+  func makeUIViewController(context: Context) -> UIKitDiagnosticViewController {
+    let vc = UIKitDiagnosticViewController()
+    vc.onDragChange = { t, dragging in
+      translation = t
+      isOuterDragging = dragging
+    }
+    vc.onDragEnd = {
+      translation = .zero
+      isOuterDragging = false
+    }
+    vc.onScrollStateChange = { state in
+      scrollState = state
+    }
+    return vc
+  }
+
+  func updateUIViewController(_ vc: UIKitDiagnosticViewController, context: Context) {
+    vc.setConfig(
+      ignoresScrollView: config.ignoresScrollView,
+      targetEdges: config.targetEdges,
+      sticksToEdges: config.sticksToEdges,
+      isScrollLockEnabled: config.isScrollLockEnabled
+    )
+  }
 }

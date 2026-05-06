@@ -58,7 +58,6 @@ struct DemoConfig: Equatable {
   var targetEdgesOption: TargetEdgesOption = .all
   var isScrollLockEnabled: Bool = false
   var edgeActivationModeOption: EdgeActivationModeOption = .anytime
-  var minimumActivationDistance: CGFloat = 0
 
   var targetEdges: ScrollViewEdge { targetEdgesOption.scrollViewEdge }
   var edgeActivationMode: EdgeActivationMode { edgeActivationModeOption.mode }
@@ -109,20 +108,6 @@ struct ConfigPanel: View {
           }
         }
         .pickerStyle(.menu)
-        .labelsHidden()
-      }
-      HStack {
-        Text("minimumActivationDistance")
-        Spacer()
-        Text("\(Int(config.minimumActivationDistance))pt")
-          .frame(width: 36, alignment: .trailing)
-          .foregroundStyle(.secondary)
-        Stepper(
-          "",
-          value: $config.minimumActivationDistance,
-          in: 0...40,
-          step: 5
-        )
         .labelsHidden()
       }
     }

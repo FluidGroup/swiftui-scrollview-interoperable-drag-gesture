@@ -97,15 +97,13 @@ final class UIKitDiagnosticViewController: UIViewController {
     targetEdges: ScrollViewEdge,
     sticksToEdges: Bool,
     edgeActivationMode: EdgeActivationMode,
-    minimumActivationDistance: CGFloat,
     isScrollLockEnabled: Bool
   ) {
     gesture.configuration = .init(
       ignoresScrollView: ignoresScrollView,
       targetEdges: targetEdges,
       sticksToEdges: sticksToEdges,
-      edgeActivationMode: edgeActivationMode,
-      minimumActivationDistance: minimumActivationDistance
+      edgeActivationMode: edgeActivationMode
     )
     gesture.isScrollLockEnabled = isScrollLockEnabled
   }
@@ -187,7 +185,6 @@ struct UIKitDiagnosticHostingView: UIViewControllerRepresentable {
       targetEdges: config.targetEdges,
       sticksToEdges: config.sticksToEdges,
       edgeActivationMode: config.edgeActivationMode,
-      minimumActivationDistance: config.minimumActivationDistance,
       isScrollLockEnabled: config.isScrollLockEnabled
     )
     if clearStickingRequestID != context.coordinator.lastClearRequestID {

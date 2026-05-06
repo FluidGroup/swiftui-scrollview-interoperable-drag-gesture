@@ -132,8 +132,7 @@ struct SwiftUIDiagnosticDemo: View {
           ignoresScrollView: config.ignoresScrollView,
           targetEdges: config.targetEdges,
           sticksToEdges: config.sticksToEdges,
-          edgeActivationMode: config.edgeActivationMode,
-          minimumActivationDistance: config.minimumActivationDistance
+          edgeActivationMode: config.edgeActivationMode
         ),
         isScrollLockEnabled: $config.isScrollLockEnabled,
         stickingEdges: $stickingEdges,

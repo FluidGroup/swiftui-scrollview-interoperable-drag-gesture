@@ -31,25 +31,17 @@ public struct ScrollViewInteroperableDragGestureConfiguration: Sendable {
   public var ignoresScrollView: Bool
   public var sticksToEdges: Bool
   public var edgeActivationMode: EdgeActivationMode
-  /// Minimum distance (in points) the finger must travel from its touch-down
-  /// location before the gesture starts forwarding motion. `0` disables the
-  /// gate (default) and matches the underlying UIPanGestureRecognizer's own
-  /// minimum. Useful to avoid micro-movements momentarily triggering the outer
-  /// drag on light touches.
-  public var minimumActivationDistance: CGFloat
 
   public init(
     ignoresScrollView: Bool,
     targetEdges: ScrollViewEdge,
     sticksToEdges: Bool,
-    edgeActivationMode: EdgeActivationMode = .anytime,
-    minimumActivationDistance: CGFloat = 0
+    edgeActivationMode: EdgeActivationMode = .anytime
   ) {
     self.ignoresScrollView = ignoresScrollView
     self.sticksToEdges = sticksToEdges
     self.targetEdges = targetEdges
     self.edgeActivationMode = edgeActivationMode
-    self.minimumActivationDistance = minimumActivationDistance
   }
 }
 
@@ -80,10 +72,6 @@ final class DragGestureHandler {
     /// visibility after locking hides it.
     var initialShowsVerticalScrollIndicator: Bool? = nil
     var initialShowsHorizontalScrollIndicator: Bool? = nil
-    /// Raw accumulated pan translation used only until
-    /// `minimumActivationDistance` is crossed. Discarded afterwards.
-    var preActivationTranslation: CGSize = .zero
-    var hasPassedActivationThreshold: Bool = false
   }
 
   var tracking: Tracking = .init()
@@ -193,30 +181,16 @@ final class DragGestureHandler {
         tracking.initialShowsHorizontalScrollIndicator = scrollView.showsHorizontalScrollIndicator
       }
 
-      // Activation-distance gate: discard the first few points of motion so
-      // micro-movements on a light touch don't flicker the outer drag. A
-      // consumer-imposed `isScrollLockEnabled` bypasses the gate since it
-      // signals an explicit request to own the gesture immediately.
-      if configuration.minimumActivationDistance > 0,
-         tracking.hasPassedActivationThreshold == false,
-         isScrollLockEnabled == false {
-        tracking.preActivationTranslation.width += diff.x
-        tracking.preActivationTranslation.height += diff.y
-        let magnitude = hypot(
-          tracking.preActivationTranslation.width,
-          tracking.preActivationTranslation.height
-        )
-        if magnitude < configuration.minimumActivationDistance {
-          return
-        }
-        tracking.hasPassedActivationThreshold = true
-      }
-
       if let scrollView = recognizer.trackingScrollView {
 
-        let scrollController = ScrollController(scrollView: scrollView)
-
-        tracking.currentScrollController = scrollController
+        let scrollController: ScrollController
+        if let existing = tracking.currentScrollController, existing.scrollView === scrollView {
+          scrollController = existing
+        } else {
+          tracking.currentScrollController?.endTracking()
+          scrollController = ScrollController(scrollView: scrollView)
+          tracking.currentScrollController = scrollController
+        }
 
         let scrollableEdges = scrollView.scrollableEdges
 
